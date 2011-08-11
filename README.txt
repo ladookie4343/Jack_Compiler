@@ -1,1 +1,1 @@
-simple compiler for a simple language called 'jack' from the book 'The Elements of Computing Systems'
+simple compiler for a simple language called 'jack' created for project 10 in 'The Elements of Computing Systems'
