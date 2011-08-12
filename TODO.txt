@@ -1,0 +1,23 @@
+- make all compile functions in the form:
+
+  int i = 0;
+  while (i < 3) {
+      if (!tokenizer->hasMoreTokens()) return;
+      tokenizer->advance();
+      switch (i) {
+          case 0:
+	      //do the first thing
+	      break;
+	  case 1:
+	      // do the second thing
+	      break;
+	  case 2:
+	      // do the third thing
+              break;
+      }
+      i++;
+  }
+
+- finish compileExpression() and compileTerm()
+
+
