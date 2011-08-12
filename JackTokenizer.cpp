@@ -139,9 +139,9 @@ void JackTokenizer::eraseOpenCloseComments(string& line)
 
 void JackTokenizer::splitIntoTokens(string& line)
 {
-    stringstream tokenizer;
-    string symbols("{}()[].,;+-*/&|<>=~");
-    string word;
+	stringstream tokenizer;
+	string symbols("{}()[].,;+-*/&|<>=~");
+	string word;
 	string quoteString;
 	int spaceCount = numberOfSpacesBeforeFirstQuotationMark(line, line.find_first_of("\""));
 
@@ -155,35 +155,35 @@ void JackTokenizer::splitIntoTokens(string& line)
 	}
 	int currentIndex = spaceCount;
 
-    tokenizer << line;
-    while (tokenizer >> word) {
-        size_t index;
-        while ((index = word.find_first_of(symbols)) != string::npos) {
+	tokenizer << line;
+	while (tokenizer >> word) {
+		size_t index;
+		while ((index = word.find_first_of(symbols)) != string::npos) {
 			if (currentIndex == begQuoteIndex) {
 				tokens.push_back(quoteString);
 				currentIndex += quoteString.size();
 			} 
 			if (index == 0) {
-                string str;
-                str = word[0];
-                tokens.push_back(str);
-                word.erase(0, 1);
+				string str;
+				str = word[0];
+				tokens.push_back(str);
+				word.erase(0, 1);
 				currentIndex++;
-            } else {
-                string str1(word, 0, index);
-                string str2;
-                str2 = word[index];
-                tokens.push_back(str1);
-                tokens.push_back(str2);
-                word.erase(0, index + 1);
+			} else {
+				string str1(word, 0, index);
+				string str2;
+				str2 = word[index];
+				tokens.push_back(str1);
+				tokens.push_back(str2);
+				word.erase(0, index + 1);
 				currentIndex += (str1.size() + 1);
-            }
-        }
-        if (word.size() > 0) {
-            tokens.push_back(word);
+			}
+		}
+		if (word.size() > 0) {
+			tokens.push_back(word);
 			currentIndex += word.size();
-        }
-    }
+		}
+	}
 }
 
 int JackTokenizer::numberOfSpacesBeforeFirstQuotationMark(string& line, int index)
