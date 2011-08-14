@@ -25,6 +25,7 @@ private:
 	void compileExpression();
 	void compileTerm();
 	void compileExpressionList();
+	void outputSymbol();
 	
 	JackTokenizer *tokenizer;
 	ofstream &outfile;

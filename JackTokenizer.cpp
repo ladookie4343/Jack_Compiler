@@ -11,7 +11,7 @@ JackTokenizer::JackTokenizer(ifstream& infile_) :
 		hasMoreTokens_(true), inQuote(false)
 {
 	getAllTokens();
-	copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, "\n"));
+	//copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, "\n"));
 	
 }
 
