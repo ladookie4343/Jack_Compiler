@@ -11,7 +11,7 @@ JackTokenizer::JackTokenizer(ifstream& infile_) :
 		hasMoreTokens_(true), inQuote(false)
 {
 	getAllTokens();
-	//copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, "\n"));
+//	copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, "\n"));
 	
 }
 
@@ -34,7 +34,7 @@ void JackTokenizer::advance()
 		str == "do"     || str == "if"          || str == "else"     || str == "while"  || 
 		str == "return") {
 			tokenType_ = KEYWORD;
-	} else if (str.find_first_of("{}()[].,;+-*/&|<>=~") != string::npos) {
+	} else if (ispunct(str[0]) && str[0] != '\"') {
 		tokenType_ = SYMBOL;
 	} else if (isdigit(str[0])) {
 		tokenType_ = INT_CONST;

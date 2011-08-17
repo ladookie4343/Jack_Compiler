@@ -1,7 +1,8 @@
 #ifndef COMPILATION_ENGINE_H
 #define COMPILATION_ENGINE_H
 #include "JackTokenizer.h"
-
+#include "SymbolTable.h"
+#include "VMWriter.h"
 
 class CompilationEngine
 {
@@ -26,10 +27,13 @@ private:
 	void compileTerm();
 	void compileExpressionList();
 	void outputSymbol();
+	void printCurrentToken();
 	
 	JackTokenizer *tokenizer;
 	ofstream &outfile;
 	size_t indentCount;
+	SymbolTable *symbolTable;
+	VMWriter *vmWriter;
 };
 
 #endif
