@@ -21,22 +21,22 @@ void SymbolTable::define(string name, string type, string kind)
 {
 	VariableInfo vi;
 
-	if (kind == "STATIC") {
+	if (kind == "static") {
 		VariableInfo v = { type, kind, staticIdx++ };
 		vi = v;
-	} else if(kind ==  "FIELD") {
+	} else if(kind ==  "field") {
 		VariableInfo v = { type, kind, fieldIdx++ };
 		vi = v;
-	} else if(kind ==  "ARG") {
+	} else if(kind ==  "arg") {
 		VariableInfo v = { type, kind, argIdx++ };
 		vi = v;
-	} else if(kind == "VAR") {
+	} else if(kind == "var") {
 		VariableInfo v = { type, kind, varIdx++ };
 		vi = v;
 	}
 	
 
-	if (kind == "STATIC" || kind == "FIELD") {
+	if (kind == "static" || kind == "field") {
 		classSymbolTable[name] = vi;
 	} else {
 		subroutineSymbolTable[name] = vi;
@@ -47,14 +47,14 @@ size_t SymbolTable::varCount(string kind)
 {
 	size_t variableCount = 0;
 	map<string, VariableInfo>::iterator pos;
-	if (kind == "STATIC" || kind ==  "FIELD") {
+	if (kind == "static" || kind ==  "field") {
 		for (pos = classSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
 			if (pos->second.kind == kind) {
 				variableCount++;
 			}
 		}
-	} else if(kind == "ARG" || kind == "VAR") {
-		for (pos = subroutineSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
+	} else if(kind == "arg" || kind == "var") {
+		for (pos = subroutineSymbolTable.begin(); pos != subroutineSymbolTable.end(); ++pos) {
 			if (pos->second.kind == kind) {
 				variableCount++;
 			}
@@ -65,7 +65,7 @@ size_t SymbolTable::varCount(string kind)
 
 string SymbolTable::kindOf(string name)
 {
-	string kind = "NONE";
+	string kind = "none";
 	map<string, VariableInfo>::iterator pos;
 	pos = subroutineSymbolTable.find(name) ;
 	if(pos != subroutineSymbolTable.end()) {
@@ -109,4 +109,24 @@ size_t SymbolTable::indexOf(string name)
 		}
 	}
 	return index;
+}
+
+void SymbolTable::printSymbolTable()
+{
+	cout << "symbol table:\n\n";
+
+	map<string, VariableInfo>::iterator pos;
+
+	cout << "class scope symbol table\n";
+	cout << setw(10) << "Name" << setw(10) << "Type" << setw(10) << "Kind" << setw(4) << "#\n";
+	for (pos = classSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
+		cout << setw(10) << pos->first << setw(10) << pos->second.type << setw(10) 
+			 << pos->second.kind << setw(4) << pos->second.index << endl;
+	}
+
+	for (pos = subroutineSymbolTable.begin(); pos != subroutineSymbolTable.end(); ++pos) {
+		
+	}
+
+	cout << "\n\n";
 }

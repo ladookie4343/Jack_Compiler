@@ -2,6 +2,8 @@
 #define SYMBOL_TABLE_H
 #include <string>
 #include <map>
+#include <iostream>
+#include <iomanip>
 using namespace std;
 
 class SymbolTable
@@ -16,6 +18,7 @@ public:
 	string kindOf(string name);
 	string typeOf(string name);
 	size_t indexOf(string name);
+	void printSymbolTable();
 
 private:
 	struct VariableInfo {
