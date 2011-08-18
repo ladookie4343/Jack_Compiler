@@ -4,8 +4,6 @@
 #include <map>
 using namespace std;
 
-enum Kind { STATIC, FIELD, ARG, VAR, NONE };
-
 class SymbolTable
 {
 public:
@@ -13,16 +11,16 @@ public:
 	~SymbolTable(void);
 
 	void startSubroutine();
-	void define(string name, string type, Kind kind);
-	size_t varCount(Kind kind);
-	Kind kindOf(string name);
+	void define(string name, string type, string kind);
+	size_t varCount(string kind);
+	string kindOf(string name);
 	string typeOf(string name);
 	size_t indexOf(string name);
 
 private:
 	struct VariableInfo {
 		string type;
-		Kind kind;
+		string kind;
 		size_t index;
 	};
 

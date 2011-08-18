@@ -28,12 +28,14 @@ private:
 	void compileExpressionList();
 	void outputSymbol();
 	void printCurrentToken();
+	void advanceTokenizer();
 	
 	JackTokenizer *tokenizer;
 	ofstream &outfile;
 	size_t indentCount;
 	SymbolTable *symbolTable;
 	VMWriter *vmWriter;
+	string className;
 };
 
 #endif

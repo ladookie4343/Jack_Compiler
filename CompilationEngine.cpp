@@ -13,36 +13,42 @@ CompilationEngine::CompilationEngine(JackTokenizer *tokenizer_, ofstream& outfil
 
 CompilationEngine::~CompilationEngine(void)
 {
+	delete tokenizer;
+	delete vmWriter;
+	delete symbolTable;
+}
+
+void CompilationEngine::advanceTokenizer()
+{
+	assert(tokenizer->hasMoreTokens());
+	tokenizer->advance();
 }
 
 void CompilationEngine::compileClass()
-{
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+{	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == KEYWORD);
 	assert(tokenizer->keyWord() == "class");
+	
 	outfile << "<class>\n";
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> "
 		    << tokenizer->keyWord() << " </keyword>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> "
 		    << tokenizer->identifier() << " </identifier>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '{');
 	outputSymbol();
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 
 	// classVarDec*
 	while (true) {
-		if (!tokenizer->hasMoreTokens()) {
-			return;
-		}
 		assert(tokenizer->tokenType() == KEYWORD ||tokenizer->tokenType() == SYMBOL);
 		if (tokenizer->tokenType() == KEYWORD) {
 			assert(tokenizer->keyWord() == "static" || tokenizer->keyWord() == "field" ||
@@ -81,8 +87,8 @@ void CompilationEngine::compileClassVarDec()
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> " << tokenizer->keyWord()
 		    << " </keyword>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	TokenType t_type = tokenizer->tokenType();
 	assert(t_type == KEYWORD || t_type == IDENTIFIER);
 	if (t_type == KEYWORD) {
@@ -93,18 +99,13 @@ void CompilationEngine::compileClassVarDec()
 		outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 			    << " </identifier>\n";
 	}
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 		    << " </identifier>\n";
 	while (true) {
-		if (!tokenizer->hasMoreTokens()) {
-			return;
-		}
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL);
 		if (tokenizer->symbol() == ';') {
 			outputSymbol();
@@ -116,7 +117,7 @@ void CompilationEngine::compileClassVarDec()
 		if (!tokenizer->hasMoreTokens()) {
 			return;
 		}
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == IDENTIFIER);
 		outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 			    << " </identifier>\n";
@@ -124,10 +125,7 @@ void CompilationEngine::compileClassVarDec()
 	indentCount--;
 	outfile << string(indentCount * 2, ' ') << "</classVarDec>\n";
 
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+	advanceTokenizer();
 }
 
 void CompilationEngine::compileSubroutine()
@@ -136,8 +134,8 @@ void CompilationEngine::compileSubroutine()
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> " << tokenizer->keyWord()
 		    << " </keyword>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == KEYWORD || tokenizer->tokenType() == IDENTIFIER);
 	if (tokenizer->tokenType() == KEYWORD) {
 		assert(tokenizer->keyWord() == "void" || tokenizer->keyWord() == "int" ||
@@ -148,26 +146,25 @@ void CompilationEngine::compileSubroutine()
 		outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 		        << " </identifier>\n";
 	}
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 	        << " </identifier>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '(');
 	outputSymbol();
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
-
+	
+	advanceTokenizer();
 	compileParameterList();
 
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == ')');
 	outputSymbol();    
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 
 	//subroutine body
 	outfile << string(indentCount * 2, ' ') << "<subroutineBody>\n";
@@ -175,10 +172,8 @@ void CompilationEngine::compileSubroutine()
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '{');
 	outputSymbol();
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+
+	advanceTokenizer();
 
 	// varDec*
 	while (true) {
@@ -202,10 +197,7 @@ void CompilationEngine::compileSubroutine()
 	indentCount--;
 	outfile << string(indentCount * 2, ' ') << "</subroutineDec>\n";
 
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+	advanceTokenizer();
 }
 
 void CompilationEngine::compileParameterList()
@@ -229,22 +221,20 @@ void CompilationEngine::compileParameterList()
 		outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 		        << " </identifier>\n";
 	}
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 	        << " </identifier>\n";
 	while (true) {
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL);
 		assert(tokenizer->symbol() == ',' || tokenizer->symbol() == ')');
 		if (tokenizer->symbol() == ')') {
 			break;
 		} else {
 			outputSymbol(); 
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			assert(tokenizer->tokenType() == KEYWORD || tokenizer->tokenType() == IDENTIFIER);
 			if (tokenizer->tokenType() == KEYWORD) {
 				assert(tokenizer->keyWord() == "int" || tokenizer->keyWord() == "char" ||
@@ -255,8 +245,7 @@ void CompilationEngine::compileParameterList()
 				outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 						<< " </identifier>\n";
 			}
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			assert(tokenizer->tokenType() == IDENTIFIER);
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 			        << " </identifier>\n";
@@ -274,10 +263,8 @@ void CompilationEngine::compileVarDec()
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> " << tokenizer->keyWord()
 			<< " </keyword>\n";
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == KEYWORD || tokenizer->tokenType() == IDENTIFIER);
 	if (tokenizer->tokenType() == KEYWORD) {
 		assert(tokenizer->keyWord() == "int" || tokenizer->keyWord() == "char" ||
@@ -288,18 +275,13 @@ void CompilationEngine::compileVarDec()
 		outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 		        << " </identifier>\n";
 	}
-	if (!tokenizer->hasMoreTokens()) {
-		return;
-	}
-	tokenizer->advance();
+
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 	        << " </identifier>\n";
 	while (true) {
-		if (!tokenizer->hasMoreTokens()) {
-			return;
-		}
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL);
 		assert(tokenizer->symbol() == ',' || tokenizer->symbol() == ';');
 		if (tokenizer->symbol() == ';') {
@@ -310,7 +292,7 @@ void CompilationEngine::compileVarDec()
 			if (!tokenizer->hasMoreTokens()) {
 				return;
 			}
-			tokenizer->advance();
+			advanceTokenizer();
 			assert(tokenizer->tokenType() == IDENTIFIER);
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 					<< " </identifier>\n";
@@ -321,7 +303,7 @@ void CompilationEngine::compileVarDec()
 	if (!tokenizer->hasMoreTokens()) {
 		return;
 	}
-	tokenizer->advance();
+	advanceTokenizer();
 }
 
 void CompilationEngine::compileStatements()
@@ -354,7 +336,7 @@ void CompilationEngine::compileStatements()
 			return;
 		}
 		if (keyword != "if") {
-			tokenizer->advance();
+			advanceTokenizer();
 		}
 	}
 }
@@ -372,8 +354,7 @@ void CompilationEngine::compileDo()
 
 	int i = 0;
 	while (i < 5) {
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		switch (i) {
 			case 0:
 				assert(tokenizer->tokenType() == IDENTIFIER);
@@ -386,8 +367,8 @@ void CompilationEngine::compileDo()
 				previousSymbol = tokenizer->symbol();
 				outputSymbol();
 				if (tokenizer->symbol() == '(') {
-					if (!tokenizer->hasMoreTokens()) return;
-					tokenizer->advance();
+					
+					advanceTokenizer();
 					compileExpressionList();
 					outputSymbol();
 				}
@@ -410,8 +391,7 @@ void CompilationEngine::compileDo()
 					assert(tokenizer->tokenType() == SYMBOL);
 					assert(tokenizer->symbol() == '(');
 					outputSymbol();
-					if (!tokenizer->hasMoreTokens()) return;
-					tokenizer->advance();
+					advanceTokenizer();
 					compileExpressionList();
 					assert(tokenizer->tokenType() == SYMBOL);
 					assert(tokenizer->symbol() == ')');
@@ -439,37 +419,32 @@ void CompilationEngine::compileLet()
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> " << tokenizer->keyWord()
 		    << " </keyword>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == IDENTIFIER);
 	outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 			<< " </identifier>\n";
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '[' || tokenizer->symbol() == '=');
 	if (tokenizer->symbol() == '[') {
 		outputSymbol();
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		compileExpression();
 		outputSymbol();
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == '=');
 		outputSymbol();
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		compileExpression();
 		outputSymbol();
 	} else { // '='
 		outputSymbol(); // =				
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		compileExpression();
 		if(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ')') {
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 		}
 		outputSymbol();				
 	}
@@ -490,8 +465,7 @@ void CompilationEngine::compileWhile()
 
 	int i = 0;
 	while (i < 4) {
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+		advanceTokenizer();
 		switch (i) {
 			case 0: // read a '('
 				assert(tokenizer->tokenType() == SYMBOL);
@@ -532,10 +506,8 @@ void CompilationEngine::compileReturn()
 	indentCount++;
 	outfile << string(indentCount * 2, ' ') << "<keyword> " << tokenizer->keyWord()
 		    << " </keyword>\n";
-
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
-
+	
+	advanceTokenizer();
 	if(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ';') {
 		outputSymbol();				
 		indentCount--;
@@ -568,8 +540,7 @@ void CompilationEngine::compileIf()
 
 	int i = 0;
 	while (i < 7) {
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		switch (i) {
 			case 0: // read a '('
 				assert(tokenizer->tokenType() == SYMBOL);
@@ -616,8 +587,8 @@ void CompilationEngine::compileIf()
 		i++;
 	}
 
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	indentCount--;
 	outfile << string(indentCount * 2, ' ') << "</ifStatement>\n";
 }
@@ -642,8 +613,7 @@ void CompilationEngine::compileExpression()
 		}
 		assert(tokenizer->tokenType() == SYMBOL);
 		outputSymbol();				
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		compileTerm();
 	}
 
@@ -669,37 +639,31 @@ void CompilationEngine::compileTerm()
 				<< " </keyword>\n";
 	} else if (tokenizer->tokenType() == IDENTIFIER) {
 		string ident = tokenizer->identifier();
-		if (!tokenizer->hasMoreTokens()) return;
-		tokenizer->advance();
+		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL);
 		if (tokenizer->symbol() == '[') {
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << ident << " </identifier>\n";
 			outputSymbol();
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileExpression();
 			outputSymbol();
 		} else if (tokenizer->symbol() == '(') {
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << ident << " </identifier>\n";
 			outputSymbol();
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileExpressionList();
 			outputSymbol();					
 		} else if (tokenizer->symbol() == '.') {
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << ident << " </identifier>\n";
 			outputSymbol();					
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			assert(tokenizer->tokenType() == IDENTIFIER);
 			outfile << string(indentCount * 2, ' ') << "<identifier> " << tokenizer->identifier()
 				    << " </identifier>\n";
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			assert(tokenizer->tokenType() == SYMBOL);
 			outputSymbol();	
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileExpressionList();
 			outputSymbol();					
 		} else {
@@ -711,24 +675,21 @@ void CompilationEngine::compileTerm()
 	} else if (tokenizer->tokenType() == SYMBOL) {
 		if (tokenizer->symbol() == '(') {
 			outputSymbol();					
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileExpression();
 			outputSymbol();					
 		} else {
 			assert(tokenizer->symbol() == '-' || tokenizer->symbol() == '~');
 			outputSymbol();					
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileTerm();
 			indentCount--;
 			outfile << string(indentCount * 2, ' ') << "</term>\n";
 			return;
 		}
 	}
-
-	if (!tokenizer->hasMoreTokens()) return;
-	tokenizer->advance();
+	
+	advanceTokenizer();
 	indentCount--;
 	outfile << string(indentCount * 2, ' ') << "</term>\n";
 }
@@ -745,7 +706,6 @@ void CompilationEngine::compileExpressionList()
 	}
 
 	compileExpression();
-
 	while(true) {
 		assert(tokenizer->tokenType() == SYMBOL) ;
 		if (tokenizer->symbol() == ')'){
@@ -755,8 +715,7 @@ void CompilationEngine::compileExpressionList()
 		} else { // ','
 			assert(tokenizer->symbol() == ',');
 			outputSymbol();
-			if (!tokenizer->hasMoreTokens()) return;
-			tokenizer->advance();
+			advanceTokenizer();
 			compileExpression();
 		}
 	}

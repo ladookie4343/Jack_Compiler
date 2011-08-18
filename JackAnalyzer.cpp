@@ -47,7 +47,8 @@ void JackAnalyzer::compile()
 
 		cout << "Compilation successful\n\n";
 		infile.close();
-		outfile.close();		
+		outfile.close();
+		delete engine;
 	}
 }
 

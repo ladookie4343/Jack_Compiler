@@ -17,55 +17,43 @@ void SymbolTable::startSubroutine()
 	argIdx = varIdx = 0;
 }
 
-void SymbolTable::define(string name, string type, Kind kind)
+void SymbolTable::define(string name, string type, string kind)
 {
 	VariableInfo vi;
 
-	switch(kind) {
-		case STATIC:
-		{
-			VariableInfo v = { type, kind, staticIdx++ };
-			vi = v;
-			break;
-		}
-		case FIELD:
-		{
-			VariableInfo v = { type, kind, fieldIdx++ };
-			vi = v;
-			break;
-		}
-		case ARG:
-		{
-			VariableInfo v = { type, kind, argIdx++ };
-			vi = v;
-			break;
-		}
-		case VAR:
-		{
-			VariableInfo v = { type, kind, varIdx++ };
-			vi = v;
-			break;
-		}
+	if (kind == "STATIC") {
+		VariableInfo v = { type, kind, staticIdx++ };
+		vi = v;
+	} else if(kind ==  "FIELD") {
+		VariableInfo v = { type, kind, fieldIdx++ };
+		vi = v;
+	} else if(kind ==  "ARG") {
+		VariableInfo v = { type, kind, argIdx++ };
+		vi = v;
+	} else if(kind == "VAR") {
+		VariableInfo v = { type, kind, varIdx++ };
+		vi = v;
 	}
+	
 
-	if (kind == STATIC || kind == FIELD) {
+	if (kind == "STATIC" || kind == "FIELD") {
 		classSymbolTable[name] = vi;
 	} else {
 		subroutineSymbolTable[name] = vi;
 	}
 }
 
-size_t SymbolTable::varCount(Kind kind)
+size_t SymbolTable::varCount(string kind)
 {
 	size_t variableCount = 0;
 	map<string, VariableInfo>::iterator pos;
-	if (kind == STATIC || kind ==  FIELD) {
+	if (kind == "STATIC" || kind ==  "FIELD") {
 		for (pos = classSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
 			if (pos->second.kind == kind) {
 				variableCount++;
 			}
 		}
-	} else if(kind == ARG || kind == VAR) {
+	} else if(kind == "ARG" || kind == "VAR") {
 		for (pos = subroutineSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
 			if (pos->second.kind == kind) {
 				variableCount++;
@@ -75,9 +63,9 @@ size_t SymbolTable::varCount(Kind kind)
 	return variableCount;
 }
 
-Kind SymbolTable::kindOf(string name)
+string SymbolTable::kindOf(string name)
 {
-	Kind kind = NONE;
+	string kind = "NONE";
 	map<string, VariableInfo>::iterator pos;
 	pos = subroutineSymbolTable.find(name) ;
 	if(pos != subroutineSymbolTable.end()) {
