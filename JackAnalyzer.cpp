@@ -49,6 +49,7 @@ void JackAnalyzer::compile()
 		infile.close();
 		outfile.close();
 		delete engine;
+		delete tokenizer;
 	}
 }
 

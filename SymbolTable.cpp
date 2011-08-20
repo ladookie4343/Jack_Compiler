@@ -111,21 +111,22 @@ size_t SymbolTable::indexOf(string name)
 	return index;
 }
 
-void SymbolTable::printSymbolTable()
+void SymbolTable::display()
 {
-	cout << "symbol table:\n\n";
-
 	map<string, VariableInfo>::iterator pos;
 
 	cout << "class scope symbol table\n";
-	cout << setw(10) << "Name" << setw(10) << "Type" << setw(10) << "Kind" << setw(4) << "#\n";
+	cout << setw(20) << "Name" << setw(10) << "Type" << setw(10) << "Kind" << setw(5) << "#\n";
 	for (pos = classSymbolTable.begin(); pos != classSymbolTable.end(); ++pos) {
-		cout << setw(10) << pos->first << setw(10) << pos->second.type << setw(10) 
-			 << pos->second.kind << setw(4) << pos->second.index << endl;
+		cout << setw(20) << pos->first << setw(10) << pos->second.type << setw(10) 
+			 << pos->second.kind << setw(5) << pos->second.index << endl;
 	}
 
+	cout << "\nsubroutine scope symbol table\n";
+	cout << setw(20) << "Name" << setw(10) << "Type" << setw(10) << "Kind" << setw(5) << "#\n";
 	for (pos = subroutineSymbolTable.begin(); pos != subroutineSymbolTable.end(); ++pos) {
-		
+		cout << setw(20) << pos->first << setw(10) << pos->second.type << setw(10) 
+			 << pos->second.kind << setw(5) << pos->second.index << endl;		
 	}
 
 	cout << "\n\n";

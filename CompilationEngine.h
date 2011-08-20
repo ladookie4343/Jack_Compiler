@@ -29,13 +29,15 @@ private:
 	void outputSymbol();
 	void printCurrentToken();
 	void advanceTokenizer();
+	Segment segment(string seg);
+	Command command(char op);
 	
 	JackTokenizer *tokenizer;
 	ofstream &outfile;
-	size_t indentCount;
 	SymbolTable *symbolTable;
 	VMWriter *vmWriter;
-	string className;
+	string className, subroutineName;
+	size_t nArgs;
 };
 
 #endif

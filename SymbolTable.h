@@ -18,7 +18,7 @@ public:
 	string kindOf(string name);
 	string typeOf(string name);
 	size_t indexOf(string name);
-	void printSymbolTable();
+	void display();
 
 private:
 	struct VariableInfo {
