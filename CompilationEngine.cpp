@@ -4,7 +4,7 @@
 using namespace std;
 
 CompilationEngine::CompilationEngine(JackTokenizer *tokenizer_, ofstream& outfile_) :
-					tokenizer(tokenizer_), outfile(outfile_)
+					tokenizer(tokenizer_), outfile(outfile_), ifCount(-1), whileCount(-1)
 {
 	symbolTable = new SymbolTable();
 	vmWriter = new VMWriter(outfile_);
@@ -68,10 +68,9 @@ void CompilationEngine::compileClass()
 			compileSubroutine();
 		}
 	}
+	symbolTable->display();
 
-	outputSymbol();
-	outfile << "</class>\n";
-
+	assert(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == '}');
 }
 
 void CompilationEngine::compileClassVarDec()
@@ -116,7 +115,7 @@ void CompilationEngine::compileSubroutine()
 {   //method or constructor or function
 	symbolTable->startSubroutine();
 
-	string subroutineType = tokenizer->keyWord();
+	currentSubroutineType = tokenizer->keyWord();
 
 	advanceTokenizer(); // type 
 	assert(tokenizer->tokenType() == KEYWORD || tokenizer->tokenType() == IDENTIFIER);
@@ -130,7 +129,7 @@ void CompilationEngine::compileSubroutine()
 	assert(tokenizer->symbol() == '(');
 	
 	advanceTokenizer();
-	if (subroutineType == "method") {
+	if (currentSubroutineType == "method") {
 		symbolTable->define("this", className, "arg");
 	}
 	compileParameterList();
@@ -157,10 +156,10 @@ void CompilationEngine::compileSubroutine()
 	}
 	
 	vmWriter->writeFunction(className + "." + subroutineName, symbolTable->varCount("var"));
-	if (subroutineType == "method") {
+	if (currentSubroutineType == "method") {
 		vmWriter->writePush(ARG, 0);
 		vmWriter->writePop(POINTER, 0);
-	} else if (subroutineType == "constructor") {
+	} else if (currentSubroutineType == "constructor") {
 		vmWriter->writePush(CONST, symbolTable->varCount("field"));
 		vmWriter->writeCall("Memory.alloc", 1);
 		vmWriter->writePop(POINTER, 0);
@@ -296,56 +295,55 @@ void CompilationEngine::compileDo()
 	assert(tokenizer->keyWord() == "do");
 	
 	char previousSymbol;
-	string ident;
+	string identBeforeDot, identAfterDot;
 
-	int i = 0;
-	while (i < 5) {
-		advanceTokenizer();
-		switch (i) {
-			case 0:
-				assert(tokenizer->tokenType() == IDENTIFIER);
-				ident = tokenizer->identifier();
-				break;
-			case 1:
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '(' || tokenizer->symbol() == '.');
-				previousSymbol = tokenizer->symbol();
-				if (tokenizer->symbol() == '(') {
-					vmWriter->writePush(POINTER, 0);
-					advanceTokenizer();
-					compileExpressionList();
-				}
-				break;
-			case 2:
-				if (previousSymbol == '.') {
-					assert(tokenizer->tokenType() == IDENTIFIER);
-					outfile << "<identifier> " << tokenizer->identifier()
-							<< " </identifier>\n";
-				} else {
-					assert(tokenizer->tokenType() == SYMBOL);
-					assert(tokenizer->symbol() == ';');
-					vmWriter->writeCall(className + "." + ident, nArgs);
-					vmWriter->writePop(TEMP, 0);
-					return;
-				}
-				break;
-			case 3:
-					assert(tokenizer->tokenType() == SYMBOL);
-					assert(tokenizer->symbol() == '(');
-					outputSymbol();
-					advanceTokenizer();
-					compileExpressionList();
-					assert(tokenizer->tokenType() == SYMBOL);
-					assert(tokenizer->symbol() == ')');
-					outputSymbol();
-				break;
-			case 4:
-					assert(tokenizer->tokenType() == SYMBOL);
-					assert(tokenizer->symbol() == ';');
-					outputSymbol();						
-				break;
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == IDENTIFIER);
+	identBeforeDot = tokenizer->identifier();
+				
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '(' || tokenizer->symbol() == '.');
+	previousSymbol = tokenizer->symbol();
+	if (tokenizer->symbol() == '(') {
+		if (currentSubroutineType == "constructor") {
+			vmWriter->writePush(POINTER, 0);
+		}else {
+			vmWriter->writePush(ARG, 0);
 		}
-		i++;
+		advanceTokenizer();
+		compileExpressionList();
+	}
+
+	advanceTokenizer();
+	if (previousSymbol == '.') {
+		assert(tokenizer->tokenType() == IDENTIFIER);
+		identAfterDot = tokenizer->identifier();
+	} else {
+		assert(tokenizer->tokenType() == SYMBOL);
+		assert(tokenizer->symbol() == ';');
+		vmWriter->writeCall(className + "." + identBeforeDot, nArgs + 1);
+		vmWriter->writePop(TEMP, 0);
+		return;
+	}
+
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '(');
+	advanceTokenizer();
+	compileExpressionList();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == ')');
+
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == ';');	
+
+	if (symbolTable->kindOf(identBeforeDot) == "none") {
+		vmWriter->writeCall(identBeforeDot + "." + identAfterDot, nArgs);
+	} else {
+		vmWriter->writePush(segment(symbolTable->kindOf(identBeforeDot)), symbolTable->indexOf(identBeforeDot));
+		vmWriter->writeCall(symbolTable->typeOf(identBeforeDot) + "." + identAfterDot, nArgs + 1);
 	}
 	vmWriter->writePop(TEMP, 0);
 }
@@ -387,45 +385,37 @@ void CompilationEngine::compileWhile()
 {
 	assert(tokenizer->tokenType() == KEYWORD);
 	assert(tokenizer->keyWord() == "while");
-	outfile << "<whileStatement>\n";
+
+	vmWriter->writeLabel("WHILE" + iToStr(++whileCount));
+	whileStack.push(whileCount);
 	
-	outfile << "<keyword> " << tokenizer->keyWord()
-		    << " </keyword>\n";
+	 // read a '('
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '(');		
+				
+	// read an expression and ')'
+	advanceTokenizer();
+	compileExpression();
+	vmWriter->writeArithmetic(NOT);
+	vmWriter->writeIf("END_WHILE" + iToStr(whileStack.top()));
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == ')');
+				
+	// read a '{'
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '{');		
+				
+	// read statements and a '}'.
+	advanceTokenizer();
+	compileStatements();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '}');
 
-
-	int i = 0;
-	while (i < 4) {
-		advanceTokenizer();
-		switch (i) {
-			case 0: // read a '('
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '(');
-				outputSymbol();						
-				break;
-			case 1: // read an expression
-				compileExpression();
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == ')');
-				outputSymbol();	
-				break;
-			case 2: // read a '{'
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '{');
-				outputSymbol();						
-				break;
-			case 3: // read statements and a '}'.
-				compileStatements();
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '}');
-				outputSymbol();						
-				break;
-		}
-		i++;
-	}
-
-	
-	outfile << "</whileStatement>\n";
-
+	vmWriter->writeGoto("WHILE" + iToStr(whileStack.top()));
+	vmWriter->writeLabel("END_WHILE" + iToStr(whileStack.top()));
+	whileStack.pop();
 }
 
 void CompilationEngine::compileReturn()
@@ -447,67 +437,58 @@ void CompilationEngine::compileReturn()
 }
 
 void CompilationEngine::compileIf()
-{
+{   // "if"
 	assert(tokenizer->tokenType() == KEYWORD);
 	assert(tokenizer->keyWord() == "if");
-	outfile << "<ifStatement>\n";
-	
-	outfile << "<keyword> " << tokenizer->keyWord()
-		    << " </keyword>\n";
 
-	int i = 0;
-	while (i < 7) {
-		advanceTokenizer();
-		switch (i) {
-			case 0: // read a '('
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '(');
-				outputSymbol();						
-				break;
-			case 1: // read an expression and ')'
-				compileExpression();
-				outputSymbol();
-				break;
-			case 2: // read a '{'
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '{');
-				outputSymbol();						
-				break;
-			case 3: // read statements and a closing brace.
-				compileStatements();
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '}');
-				outputSymbol();
-				break;
-			case 4: // read a potential 'else' and return if not 'else'
-				if (tokenizer->tokenType() == KEYWORD && tokenizer->keyWord() == "else") {
-					outfile << "<keyword> " << tokenizer->keyWord()
-							<< " </keyword>\n";
-				} else {
-					
-					outfile << "</ifStatement>\n";
-					return;
-				}
-				break;
-			case 5: // read '{'
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '{');
-				outputSymbol();						
-				break;
-			case 6: // read statements and a closing brace.
-				compileStatements();
-				assert(tokenizer->tokenType() == SYMBOL);
-				assert(tokenizer->symbol() == '}');
-				outputSymbol();						
-				break;
-		}
-		i++;
+	// read '('
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '(');
+
+	// read an expression and ')'
+	advanceTokenizer();
+	compileExpression();
+	vmWriter->writeArithmetic(NOT);
+	vmWriter->writeIf("IF_FALSE" + iToStr(++ifCount));
+	ifStack.push(ifCount);
+
+	// read a '{'
+	advanceTokenizer();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '{');
+
+	// read statements and a closing brace.
+	advanceTokenizer();
+	compileStatements();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '}');
+	vmWriter->writeGoto("END_IF" + iToStr(ifStack.top()));
+	vmWriter->writeLabel("IF_FALSE" + iToStr(ifStack.top()));
+
+	// read a potential 'else' and return if not 'else'
+	advanceTokenizer();
+	if (tokenizer->tokenType() != KEYWORD ||
+	   (tokenizer->tokenType() == KEYWORD && tokenizer->keyWord() != "else")) {
+		vmWriter->writeLabel("END_IF" + iToStr(ifStack.top()));
+		ifStack.pop();
+		return;
 	}
 
-	
+	// read '{'
 	advanceTokenizer();
-	
-	outfile << "</ifStatement>\n";
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '{');
+
+	// read statements and a closing brace.
+	advanceTokenizer();
+	compileStatements();
+	assert(tokenizer->tokenType() == SYMBOL);
+	assert(tokenizer->symbol() == '}');
+	vmWriter->writeLabel("END_IF" + iToStr(ifStack.top()));
+	ifStack.pop();
+
+	advanceTokenizer();
 }
 
 // first token in expression is current token at this point
@@ -530,7 +511,13 @@ void CompilationEngine::compileExpression()
 		assert(tokenizer->tokenType() == SYMBOL);
 		advanceTokenizer();
 		compileTerm();
-		vmWriter->writeArithmetic(command(op));
+		if (op == '*') { 
+			vmWriter->writeCall("Math.multiply", 2);
+		} else if(op == '/') {
+			vmWriter->writeCall("Math.divide", 2);
+		} else {
+			vmWriter->writeArithmetic(command(op));
+		}
 	}
 }
 
@@ -539,13 +526,30 @@ void CompilationEngine::compileTerm()
 	if (tokenizer->tokenType() == INT_CONST) {
 		vmWriter->writePush(CONST, tokenizer->intVal());
 	} else if (tokenizer->tokenType() == STRING_CONST) {
-		outfile << "<stringConstant> " << tokenizer->stringVal()
-				<< " </stringConstant>\n";
+		vmWriter->writePush(CONST, tokenizer->stringVal().size());
+		vmWriter->writeCall("String.new", 1);
+		vmWriter->writePop(TEMP, 1);
+		for(size_t i = 0; i < tokenizer->stringVal().size(); ++i) {
+			vmWriter->writePush(TEMP, 1);
+			vmWriter->writePush(CONST, tokenizer->stringVal()[i]);
+			vmWriter->writeCall("String.appendChar", 2);
+			vmWriter->writePop(TEMP, 1);
+		}
+		vmWriter->writePush(TEMP, 1);
 	} else if (tokenizer->tokenType() == KEYWORD) {
 		assert(tokenizer->keyWord() == "true" || tokenizer->keyWord() == "false" ||
 			   tokenizer->keyWord() == "null" || tokenizer->keyWord() == "this");
 		if (tokenizer->keyWord() == "this") {
-			vmWriter->writePush(POINTER, 0);
+			if(currentSubroutineType == "constructor") {
+				vmWriter->writePush(POINTER, 0);
+			} else {
+				vmWriter->writePush(ARG, 0);
+			}
+		} else if (tokenizer->keyWord() == "true") {
+			vmWriter->writePush(CONST, 1);
+			vmWriter->writeArithmetic(NEG);
+		} else if (tokenizer->keyWord() == "false" || tokenizer->keyWord() == "null") {
+			vmWriter->writePush(CONST, 0);
 		}
 	} else if (tokenizer->tokenType() == IDENTIFIER) {
 		string ident = tokenizer->identifier();
@@ -564,35 +568,32 @@ void CompilationEngine::compileTerm()
 			compileExpressionList();
 			outputSymbol();					
 		} else if (tokenizer->symbol() == '.') {
-			outfile << "<identifier> " << ident << " </identifier>\n";
-			outputSymbol();					
-			advanceTokenizer();
+			advanceTokenizer(); // function name
 			assert(tokenizer->tokenType() == IDENTIFIER);
-			outfile << "<identifier> " << tokenizer->identifier()
-				    << " </identifier>\n";
-			advanceTokenizer();
-			assert(tokenizer->tokenType() == SYMBOL);
-			outputSymbol();	
-			advanceTokenizer();
-			compileExpressionList();
-			outputSymbol();					
+			string functionName = tokenizer->identifier();
+			advanceTokenizer(); // '('
+			assert(tokenizer->tokenType() == SYMBOL);	
+			advanceTokenizer(); 
+			compileExpressionList(); // expression list and ')'
+			vmWriter->writeCall(ident + "." + functionName, nArgs);
 		} else {
 			vmWriter->writePush(segment(symbolTable->kindOf(ident)), symbolTable->indexOf(ident));
 			return;
 		}
 	} else if (tokenizer->tokenType() == SYMBOL) {
-		if (tokenizer->symbol() == '(') {
-			outputSymbol();					
+		if (tokenizer->symbol() == '(') {				
 			advanceTokenizer();
-			compileExpression();
-			outputSymbol();					
+			compileExpression();			
 		} else {
-			assert(tokenizer->symbol() == '-' || tokenizer->symbol() == '~');
-			outputSymbol();					
+			assert(tokenizer->symbol() == '-' || tokenizer->symbol() == '~');		
+			char binaryOp = tokenizer->symbol();
 			advanceTokenizer();
 			compileTerm();
-			
-			outfile << "</term>\n";
+			if (binaryOp == '-') {
+				vmWriter->writeArithmetic(NEG);
+			} else { // assumes '~'
+				vmWriter->writeArithmetic(NOT);
+			}
 			return;
 		}
 	}
@@ -641,28 +642,6 @@ void CompilationEngine::outputSymbol()
 	outfile << " </symbol>\n";
 }
 
-void CompilationEngine::printCurrentToken()
-{
-	cout << "\ncurrent token: ";
-	switch(tokenizer->tokenType()) {
-		case SYMBOL:
-			cout << "SYMBOL " << tokenizer->symbol() << endl;
-			break;
-		case IDENTIFIER:
-			cout << "IDENTIFIER " << tokenizer->identifier() << endl;
-			break;
-		case KEYWORD:
-			cout << "KEYWORD " << tokenizer->keyWord() << endl;
-			break;
-		case INT_CONST:
-			cout << "INT_CONST " << tokenizer->intVal() << endl;
-			break;
-		case STRING_CONST:
-			cout << "STRING_CONST " << tokenizer->stringVal() << endl;
-			break;
-	}
-}
-
 Segment CompilationEngine::segment(string seg)
 {
 	assert(seg == "static" || seg == "field" || seg == "arg" || seg == "var");
@@ -685,28 +664,25 @@ Command CompilationEngine::command(char op)
 	Command com = ADD;
 	
 	switch (op) {
-		case '+':
-			com = ADD;
-			break;
-		case '-':
-			com = SUB;
-			break;
-		case '&':
-			com = AND;
-			break;
-		case '|':
-			com = OR;
-			break;
-		case '<':
-			com = LT;
-			break;
-		case '>':
-			com = GT;
-			break;
-		case '=':
-			com = EQ;
-			break;
+		case '+': com = ADD; break;
+		case '-': com = SUB; break;
+		case '&': com = AND; break;
+		case '|': com = OR; break;
+		case '<': com = LT;	break;
+		case '>': com = GT;	break;
+		case '=': com = EQ;	break;
 	}
 
 	return com;
+}
+
+string CompilationEngine::iToStr(size_t aNumber)
+{
+    stringstream out;
+    string str;
+
+    out << aNumber;
+    out >> str;
+
+    return str;
 }

@@ -28,7 +28,6 @@ JackAnalyzer::JackAnalyzer(const string& filenameOrDirectory)
 	}
 }
 
-
 void JackAnalyzer::compile()
 {	
 	for (size_t i = 0; i < jackFilePaths.size(); ++i) {
@@ -52,7 +51,6 @@ void JackAnalyzer::compile()
 		delete tokenizer;
 	}
 }
-
 
 string JackAnalyzer::stringReplace(string filename_, string replace)
 {
