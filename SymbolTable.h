@@ -30,7 +30,6 @@ private:
 	map<string, VariableInfo> classSymbolTable;
 	map<string, VariableInfo> subroutineSymbolTable;
 	size_t staticIdx, fieldIdx, argIdx, varIdx;
-
 };
 
 #endif

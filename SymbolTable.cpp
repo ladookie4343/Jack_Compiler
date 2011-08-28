@@ -81,7 +81,7 @@ string SymbolTable::kindOf(string name)
 
 string SymbolTable::typeOf(string name)
 {
-	string str;
+	string str = "none";
 	map<string, VariableInfo>::iterator pos;
 	pos = subroutineSymbolTable.find(name) ;
 	if(pos != subroutineSymbolTable.end()) {

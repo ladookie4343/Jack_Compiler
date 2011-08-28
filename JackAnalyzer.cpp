@@ -37,7 +37,7 @@ void JackAnalyzer::compile()
 		}
 
 		string outputfilename(jackFilePaths[i].string());	
-		outfile.open(stringReplace(outputfilename, ".xml"));
+		outfile.open(stringReplace(outputfilename, ".vm"));
 		cout << "Compiling " << jackFilePaths[i].string() << endl;
 		
 		tokenizer = new JackTokenizer(infile);

@@ -326,11 +326,14 @@ void CompilationEngine::compileDo()
 		vmWriter->writePop(TEMP, 0);
 		return;
 	}
-
+	
 	advanceTokenizer();
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '(');
 	advanceTokenizer();
+	if (symbolTable->kindOf(identBeforeDot) != "none") {
+		vmWriter->writePush(segment(symbolTable->kindOf(identBeforeDot)), symbolTable->indexOf(identBeforeDot));
+	}
 	compileExpressionList();
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == ')');
@@ -342,7 +345,6 @@ void CompilationEngine::compileDo()
 	if (symbolTable->kindOf(identBeforeDot) == "none") {
 		vmWriter->writeCall(identBeforeDot + "." + identAfterDot, nArgs);
 	} else {
-		vmWriter->writePush(segment(symbolTable->kindOf(identBeforeDot)), symbolTable->indexOf(identBeforeDot));
 		vmWriter->writeCall(symbolTable->typeOf(identBeforeDot) + "." + identAfterDot, nArgs + 1);
 	}
 	vmWriter->writePop(TEMP, 0);
@@ -362,22 +364,26 @@ void CompilationEngine::compileLet()
 	assert(tokenizer->tokenType() == SYMBOL);
 	assert(tokenizer->symbol() == '[' || tokenizer->symbol() == '=');
 	if (tokenizer->symbol() == '[') {
+		vmWriter->writePush(segment(symbolTable->kindOf(assignedVariable)), 
+			                symbolTable->indexOf(assignedVariable));
 		advanceTokenizer(); // beginning of expression
 		compileExpression(); // expression and ']'
+		vmWriter->writeArithmetic(ADD);
+		vmWriter->writePop(POINTER, 1);
 		advanceTokenizer(); // '='
 		assert(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == '=');
 		advanceTokenizer();
 		compileExpression(); // expression and ';'
+		vmWriter->writePop(THAT, 0);
 	} else { // '='			
 		advanceTokenizer();
 		compileExpression(); // expression and ';' or ')'
 		if(tokenizer->tokenType() == SYMBOL && tokenizer->symbol() == ')') {
 			advanceTokenizer();
-		}			
+		}
+		vmWriter->writePop(segment(symbolTable->kindOf(assignedVariable)), 
+					       symbolTable->indexOf(assignedVariable));
 	}
-
-	vmWriter->writePop(segment(symbolTable->kindOf(assignedVariable)), 
-					   symbolTable->indexOf(assignedVariable));
 }
 
 //currentToken should be "while" at this point.
@@ -556,17 +562,16 @@ void CompilationEngine::compileTerm()
 		advanceTokenizer();
 		assert(tokenizer->tokenType() == SYMBOL);
 		if (tokenizer->symbol() == '[') {
-			outfile << "<identifier> " << ident << " </identifier>\n";
-			outputSymbol();
+			vmWriter->writePush(segment(symbolTable->kindOf(ident)), symbolTable->indexOf(ident));
 			advanceTokenizer();
 			compileExpression();
-			outputSymbol();
+			vmWriter->writeArithmetic(ADD);
+			vmWriter->writePop(POINTER, 1);
+			vmWriter->writePush(THAT, 0);
 		} else if (tokenizer->symbol() == '(') {
-			outfile << "<identifier> " << ident << " </identifier>\n";
-			outputSymbol();
 			advanceTokenizer();
 			compileExpressionList();
-			outputSymbol();					
+			vmWriter->writeCall(ident, nArgs);
 		} else if (tokenizer->symbol() == '.') {
 			advanceTokenizer(); // function name
 			assert(tokenizer->tokenType() == IDENTIFIER);
@@ -575,7 +580,12 @@ void CompilationEngine::compileTerm()
 			assert(tokenizer->tokenType() == SYMBOL);	
 			advanceTokenizer(); 
 			compileExpressionList(); // expression list and ')'
-			vmWriter->writeCall(ident + "." + functionName, nArgs);
+			if (symbolTable->kindOf(ident) == "none") {
+				vmWriter->writeCall(ident + "." + functionName, nArgs);
+			} else {
+				vmWriter->writePush(ARG, 0);
+				vmWriter->writeCall(symbolTable->typeOf(ident) + "." + functionName, nArgs + 1);
+			}
 		} else {
 			vmWriter->writePush(segment(symbolTable->kindOf(ident)), symbolTable->indexOf(ident));
 			return;
@@ -622,26 +632,6 @@ void CompilationEngine::compileExpressionList()
 		}
 	}
 }
-
-void CompilationEngine::outputSymbol()
-{
-	outfile << "<symbol> ";
-	string str;
-	char ch = tokenizer->symbol();
-	str = ch;
-	if (ch == '<' || ch == '>' || ch == '&') {
-		if (ch == '<') {
-			str = "&lt;";
-		} else if (ch == '>') {
-			str = "&gt;";
-		} else {
-			str = "&amp;";
-		}
-	}
-	outfile << str;
-	outfile << " </symbol>\n";
-}
-
 Segment CompilationEngine::segment(string seg)
 {
 	assert(seg == "static" || seg == "field" || seg == "arg" || seg == "var");
